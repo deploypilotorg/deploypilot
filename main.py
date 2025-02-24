@@ -4,12 +4,11 @@ Main Streamlit application file
 
 from urllib.parse import urlparse
 
-import requests
 import streamlit as st
 from dotenv import load_dotenv
-from scraper import GitIngestScraper  # Import the scraper
-from feature_analyzer import FeatureAnalyzer  # Import the FeatureAnalyzer
-from recommender import DeploymentPredictor  # Import the DeploymentPredictor
+from scraper import GitIngestScraper
+from feature_analyzer import FeatureAnalyzer
+from recommender import DeploymentPredictor
 
 # Load environment variables
 load_dotenv()
