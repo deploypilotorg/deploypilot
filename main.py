@@ -15,7 +15,7 @@ load_dotenv()
 
 # Configure the page
 st.set_page_config(
-    page_title="GitHub Repository Analyzer", page_icon="🔍", layout="wide"
+    page_title="DeployPilot", page_icon="🚀", layout="wide"
 )
 
 
