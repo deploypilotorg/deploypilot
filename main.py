@@ -6,9 +6,10 @@ from urllib.parse import urlparse
 
 import streamlit as st
 from dotenv import load_dotenv
-from scraper import GitIngestScraper
+
 from feature_analyzer import FeatureAnalyzer
 from recommender import DeploymentPredictor
+from scraper import GitIngestScraper
 
 # AWS Service Mappings
 AWS_SERVICE_MAPPINGS = {
@@ -92,38 +93,56 @@ raw_repo_url = st.text_input(
 if raw_repo_url:
     owner, repo = extract_repo_info(raw_repo_url)
     if owner and repo:
-        with st.spinner("Fetching repository data..."):
-            repo_data = get_repo_data(owner, repo)  # Update to use the scraper
-            if repo_data:
+        # Create placeholder for status messages
+        status_container = st.empty()
+        
+        # Stage 1: Fetching repository
+        status_container.markdown("🔄 Fetching repository data...")
+        repo_data = get_repo_data(owner, repo)
+        status_container.markdown("✅ Repository data fetched")
+        
+        if repo_data:
+            # Stage 2: Analyzing structure
+            status_container.markdown("✅ Repository data fetched\n\n🔄 Analyzing directory structure...")
+            analyzer = FeatureAnalyzer()
+            directory_analysis = analyzer.analyze_directory_structure(repo_data['directory_structure'])
+            status_container.markdown("✅ Repository data fetched\n\n✅ Directory structure analyzed\n\n🔄 Analyzing code patterns...")
+            
+            # Stage 3: Analyzing code
+            code_analysis = analyzer.analyze_with_llm(repo_data['textarea_content'])
+            status_container.markdown("✅ Repository data fetched\n\n✅ Directory structure analyzed\n\n✅ Code patterns analyzed\n\n🔄 Generating deployment recommendations...")
                 # Create an instance of FeatureAnalyzer
-                analyzer = FeatureAnalyzer()
+            analyzer = FeatureAnalyzer()
 
-                # Analyze the directory structure and code content
-                directory_analysis = analyzer.analyze_directory_structure(repo_data['directory_structure'])
-                code_analysis = analyzer.analyze_with_llm(repo_data['textarea_content'])
+            # Analyze the directory structure and code content
+            directory_analysis = analyzer.analyze_directory_structure(repo_data['directory_structure'])
+            code_analysis = analyzer.analyze_with_llm(repo_data['textarea_content'])
 
                 # Combine results into a single dictionary with 1s and 0s
-                combined_results = {}
+            combined_results = {}
 
                 # Unpack infrastructure analysis
-                for feature, present in directory_analysis.items():
-                    combined_results[feature] = 1 if present else 0
+            for feature, present in directory_analysis.items():
+                combined_results[feature] = 1 if present else 0
 
-                # Unpack code analysis
-                for feature, data in code_analysis.items():
-                    combined_results[feature] = 1 if data["present"] else 0
+            # Unpack code analysis
+            for feature, data in code_analysis.items():
+                combined_results[feature] = 1 if data["present"] else 0
 
                 # Create an instance of DeploymentPredictor
-                predictor = DeploymentPredictor("dataset.csv")
+            predictor = DeploymentPredictor("dataset.csv")
 
                 # Convert combined_results into a feature vector
-                feature_vector = list(combined_results.values())
+            feature_vector = list(combined_results.values())
                 
                 # Predict deployment type using the feature vector
-                predicted_deployment = predictor.predict_from_vector(feature_vector)
+            predicted_deployment = predictor.predict_from_vector(feature_vector)
 
+                # Clear the status messages
+            status_container.empty()
+                
                 # Display predicted deployment type at the top with a card-like container
-                st.markdown("""
+            st.markdown("""
                     <style>
                     .deployment-card {
                         padding: 2rem;
@@ -140,7 +159,7 @@ if raw_repo_url:
                     </style>
                 """, unsafe_allow_html=True)
 
-                st.markdown("""
+            st.markdown("""
                     <div class='deployment-card'>
                         <h2>🔮 Deployment Recommendation</h2>
                         <h3 style='color: #0066cc;'>""" + predicted_deployment + """</h3>
@@ -148,24 +167,24 @@ if raw_repo_url:
                 """, unsafe_allow_html=True)
 
                 # If AWS is recommended, show relevant services
-                if predicted_deployment == "AWS":
-                    st.subheader("📦 Recommended AWS Services")
+            if predicted_deployment == "AWS":
+                st.subheader("📦 Recommended AWS Services")
                     
                     # Create three columns for AWS services
-                    cols = st.columns(3)
-                    col_idx = 0
+                cols = st.columns(3)
+                col_idx = 0
                     
-                    for feature, present in combined_results.items():
-                        if present and feature in AWS_SERVICE_MAPPINGS:
-                            service_info = AWS_SERVICE_MAPPINGS[feature]
-                            with cols[col_idx % 3]:
-                                st.markdown(f"""
+                for feature, present in combined_results.items():
+                    if present and feature in AWS_SERVICE_MAPPINGS:
+                        service_info = AWS_SERVICE_MAPPINGS[feature]
+                        with cols[col_idx % 3]:
+                            st.markdown(f"""
                                     <div class='aws-service-card'>
                                         <h4>{service_info['service']}</h4>
                                         <p>{service_info['description']}</p>
                                     </div>
                                 """, unsafe_allow_html=True)
-                                col_idx += 1
+                            col_idx += 1
 
                 # Create tabs for different sections of information
                 tab1, tab2 = st.tabs(["📊 Analysis Results", "📁 Repository Details"])
