@@ -111,12 +111,6 @@ if raw_repo_url:
             # Stage 3: Analyzing code
             code_analysis = analyzer.analyze_with_llm(repo_data['textarea_content'])
             status_container.markdown("✅ Repository data fetched\n\n✅ Directory structure analyzed\n\n✅ Code patterns analyzed\n\n🔄 Generating deployment recommendations...")
-                # Create an instance of FeatureAnalyzer
-            analyzer = FeatureAnalyzer()
-
-            # Analyze the directory structure and code content
-            directory_analysis = analyzer.analyze_directory_structure(repo_data['directory_structure'])
-            code_analysis = analyzer.analyze_with_llm(repo_data['textarea_content'])
 
                 # Combine results into a single dictionary with 1s and 0s
             combined_results = {}
@@ -206,9 +200,8 @@ if raw_repo_url:
                             status = "✓" if present else "✗"
                             color_class = "feature-present" if present else "feature-absent"
                             st.markdown(f"<span class='{color_class}'>{status}</span> {feature.replace('_', ' ').title()}", unsafe_allow_html=True)
-
-                        with code_col:
-                            st.markdown("### 💻 Code Features")
+                    with code_col:
+                        st.markdown("### 💻 Code Features")
                         for feature, data in code_analysis.items():
                             status = "✓" if data["present"] else "✗"
                             color_class = "feature-present" if data["present"] else "feature-absent"
@@ -219,10 +212,10 @@ if raw_repo_url:
                                     if data.get("improvements"):
                                         st.write(f"**Suggested Improvements:** {data['improvements']}")
 
+
                 with tab2:
                     st.subheader("📁 Repository Structure")
-                    st.json(repo_data['directory_structure'])
-                    
+                    st.write(repo_data['directory_structure'])
                     st.subheader("📝 Code Content")
                     with st.expander("View Code Content"):
                         st.code(repo_data['textarea_content'])
