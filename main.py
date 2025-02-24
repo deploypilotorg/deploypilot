@@ -2,12 +2,14 @@
 Main Streamlit application file
 """
 
-import os
 from urllib.parse import urlparse
 
 import requests
 import streamlit as st
 from dotenv import load_dotenv
+from scraper import GitIngestScraper  # Import the scraper
+from feature_analyzer import FeatureAnalyzer  # Import the FeatureAnalyzer
+from recommender import DeploymentPredictor  # Import the DeploymentPredictor
 
 # Load environment variables
 load_dotenv()
@@ -26,27 +28,15 @@ def extract_repo_info(github_url):
     return None, None
 
 
-def get_repo_data(owner, repo, token=None):
-    """Fetch repository data from GitHub API"""
-    headers = {"Authorization": f"token {token}"} if token else {}
-    repo_url = f"https://api.github.com/repos/{owner}/{repo}"
-    user_url = f"https://api.github.com/users/{owner}"
-    try:
-        repo_response = requests.get(repo_url, headers=headers)
-        user_response = requests.get(user_url, headers=headers)
-        if repo_response.status_code == 200 and user_response.status_code == 200:
-            return repo_response.json(), user_response.json()
-        else:
-            st.error("Error fetching data from GitHub API")
-            return None, None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-        return None, None
+def get_repo_data(owner, repo):
+    """Fetch repository data using GitIngestScraper"""
+    scraper = GitIngestScraper(f"{owner}/{repo}")
+    return scraper.scrape()  # Use the scraper to get data
 
 
 # Title and description
-st.title("🔍 GitHub Repository Analyzer")
-st.markdown("Enter a GitHub repository URL to analyze its details and metrics.")
+st.title("🚀 DeployPilot")
+st.markdown("Enter a GitHub repository URL to get a suggested architecture")
 
 # GitHub token input (optional)
 github_token = st.text_input(
@@ -56,49 +46,76 @@ github_token = st.text_input(
 )
 
 # Repository URL input
-repo_url = st.text_input(
-    "GitHub Repository URL", placeholder="https://github.com/owner/repository"
+raw_repo_url = st.text_input(
+    "GitHub Repository URL", placeholder="owner/repo"
 )
 
-if repo_url:
-    owner, repo = extract_repo_info(repo_url)
+if raw_repo_url:
+    owner, repo = extract_repo_info(raw_repo_url)
     if owner and repo:
         with st.spinner("Fetching repository data..."):
-            repo_data, user_data = get_repo_data(owner, repo, github_token)
-            if repo_data and user_data:
-                # Create two columns
-                col1, col2 = st.columns(2)
-                # Repository Information
-                with col1:
-                    st.subheader("📊 Repository Information")
-                    st.write(f"**Name:** {repo_data['name']}")
-                    st.write(f"**Description:** {repo_data['description']}")
-                    st.write(f"**Stars:** {repo_data['stargazers_count']:,}")
-                    st.write(f"**Forks:** {repo_data['forks_count']:,}")
-                    st.write(f"**Open Issues:** {repo_data['open_issues_count']:,}")
-                    st.write(f"**Language:** {repo_data['language']}")
-                    st.write(f"**Created:** {repo_data['created_at'][:10]}")
-                    st.write(f"**Last Updated:** {repo_data['updated_at'][:10]}")
-                # Owner Information
-                with col2:
-                    st.subheader("👤 Owner Information")
-                    st.image(user_data["avatar_url"], width=150)
-                    st.write(f"**Username:** {user_data['login']}")
-                    st.write(f"**Name:** {user_data.get('name', 'N/A')}")
-                    st.write(f"**Followers:** {user_data['followers']:,}")
-                    st.write(f"**Following:** {user_data['following']:,}")
-                    st.write(f"**Public Repos:** {user_data['public_repos']:,}")
-                    st.write(f"**Location:** {user_data.get('location', 'N/A')}")
-                # Additional repository metrics
-                st.subheader("📈 Repository Metrics")
-                metrics_cols = st.columns(4)
-                with metrics_cols[0]:
-                    st.metric("Watch Count", repo_data["subscribers_count"])
-                with metrics_cols[1]:
-                    st.metric("Star Count", repo_data["stargazers_count"])
-                with metrics_cols[2]:
-                    st.metric("Fork Count", repo_data["forks_count"])
-                with metrics_cols[3]:
-                    st.metric("Open Issues", repo_data["open_issues_count"])
+            repo_data = get_repo_data(owner, repo)  # Update to use the scraper
+            if repo_data:
+                # Create an instance of FeatureAnalyzer
+                analyzer = FeatureAnalyzer()
+
+                # Analyze the directory structure and code content
+                directory_analysis = analyzer.analyze_directory_structure(repo_data['directory_structure'])
+                code_analysis = analyzer.analyze_with_llm(repo_data['textarea_content'])
+
+                # Combine results into a single dictionary with 1s and 0s
+                combined_results = {}
+
+                # Unpack infrastructure analysis
+                for feature, present in directory_analysis.items():
+                    combined_results[feature] = 1 if present else 0
+
+                # Unpack code analysis
+                for feature, data in code_analysis.items():
+                    combined_results[feature] = 1 if data["present"] else 0
+
+                # Create an instance of DeploymentPredictor
+                predictor = DeploymentPredictor("dataset.csv")
+
+                # Convert combined_results into a feature vector
+                feature_vector = list(combined_results.values())
+                
+                # Predict deployment type using the feature vector
+                predicted_deployment = predictor.predict_from_vector(feature_vector)
+
+                # Display predicted deployment type at the top
+                st.subheader("🔮 Predicted Deployment Type")
+                st.write(f"The predicted deployment type for this repository is: **{predicted_deployment}**")
+
+                # Create an expander for the rest of the information
+                with st.expander("View Repository and Analysis Information"):
+                    # Create two columns
+                    col1, col2 = st.columns(2)
+
+                    # Repository Information
+                    with col1:
+                        st.subheader("📊 Repository Information")
+                        st.write(f"**Directory Structure:** {repo_data['directory_structure']}")
+                        st.write(f"**Code Content:** {repo_data['textarea_content']}")
+
+                    # Analysis Results
+                    with col2:
+                        st.subheader("🔍 Analysis Results")
+                        st.write("### Infrastructure Features")
+                        for feature, present in directory_analysis.items():
+                            status = "✓" if present else "✗"
+                            st.write(f"{feature.replace('_', ' ').title()}: {status}")
+
+                        st.write("### Code Features")
+                        for feature, data in code_analysis.items():
+                            status = "✓" if data["present"] else "✗"
+                            st.write(f"{feature.replace('_', ' ').title()}: {status}")
+                            if data["present"]:
+                                st.write(f"Details: {data['details']}")
+                                if data.get("improvements"):
+                                    st.write(f"Suggested Improvements: {data['improvements']}")
+
+            else:
+                st.error("Failed to fetch repository data")
     else:
         st.error("Please enter a valid GitHub repository URL")
