@@ -77,8 +77,11 @@ if raw_repo_url:
                 # Create an instance of DeploymentPredictor
                 predictor = DeploymentPredictor("dataset.csv")
 
-                # Predict deployment type
-                predicted_deployment = predictor.predict_deployment(f"{owner}/{repo}")
+                # Convert combined_results into a feature vector
+                feature_vector = list(combined_results.values())
+                
+                # Predict deployment type using the feature vector
+                predicted_deployment = predictor.predict_from_vector(feature_vector)
 
                 # Display predicted deployment type at the top
                 st.subheader("🔮 Predicted Deployment Type")
