@@ -1,3 +1,5 @@
+
+import numpy as np
 from collections import Counter
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -64,6 +66,38 @@ class DeploymentPredictor:
 
         return deployment_prediction
 
+    def predict_from_vector(self, feature_vector, n_similar=5):
+            """
+            Predict deployment type for a custom feature vector
+            Args:
+                feature_vector (list or np.array): Feature vector matching the training data features
+                n_similar (int): Number of similar repositories to consider for prediction
+            Returns:
+                str: Predicted deployment type
+            """
+            # Validate input vector
+            if len(feature_vector) != self.X.shape[1]:
+                raise ValueError(f"Feature vector must have {self.X.shape[1]} features, got {len(feature_vector)}")
+
+            # Convert to numpy array and reshape
+            feature_vector = np.array(feature_vector).reshape(1, -1)
+
+            # Scale the input vector using the same scaler
+            scaled_vector = self.scaler.transform(feature_vector)
+
+            # Calculate similarity between input vector and all repositories
+            similarities = cosine_similarity(scaled_vector, self.X_scaled)[0]
+
+            # Get indices of most similar repositories
+            similar_indices = np.argsort(similarities)[::-1][:n_similar]
+
+            # Get deployment types of similar repositories
+            similar_deployments = [self.y.iloc[idx] for idx in similar_indices]
+
+            # Predict based on most common deployment type
+            deployment_prediction = Counter(similar_deployments).most_common(1)[0][0]
+
+            return deployment_prediction
 
 # Example usage
 if __name__ == "__main__":
@@ -72,3 +106,7 @@ if __name__ == "__main__":
     predicted_deployment = predictor.predict_deployment(sample_repo, n_similar=5)
 
     print(f"\nPredicted deployment type for {sample_repo}: {predicted_deployment}")
+
+    predicted_deployment = predictor.predict_from_vector([1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], n_similar=5)
+
+    print(f"\nPredicted deployment type for custom vec: {predicted_deployment}")

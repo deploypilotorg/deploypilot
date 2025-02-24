@@ -35,8 +35,8 @@ def get_repo_data(owner, repo):
 
 
 # Title and description
-st.title("🔍 GitHub Repository Analyzer")
-st.markdown("Enter a GitHub repository URL to analyze its details and metrics.")
+st.title("🚀 DeployPilot")
+st.markdown("Enter a GitHub repository URL to get a suggested architecture")
 
 # GitHub token input (optional)
 github_token = st.text_input(
@@ -47,7 +47,7 @@ github_token = st.text_input(
 
 # Repository URL input
 raw_repo_url = st.text_input(
-    "GitHub Repository URL", placeholder="https://github.com/owner/repository"
+    "GitHub Repository URL", placeholder="owner/repo"
 )
 
 if raw_repo_url:
