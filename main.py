@@ -10,6 +10,46 @@ from scraper import GitIngestScraper
 from feature_analyzer import FeatureAnalyzer
 from recommender import DeploymentPredictor
 
+# AWS Service Mappings
+AWS_SERVICE_MAPPINGS = {
+    'database': {
+        'service': 'Amazon RDS or Amazon DynamoDB',
+        'description': 'Managed relational or NoSQL database service'
+    },
+    'storage': {
+        'service': 'Amazon S3',
+        'description': 'Object storage for files and static assets'
+    },
+    'caching': {
+        'service': 'Amazon ElastiCache',
+        'description': 'In-memory caching for performance optimization'
+    },
+    'authentication': {
+        'service': 'Amazon Cognito',
+        'description': 'User authentication and authorization'
+    },
+    'realtime_events': {
+        'service': 'Amazon EventBridge or AWS AppSync',
+        'description': 'Real-time event processing and WebSocket support'
+    },
+    'message_queues': {
+        'service': 'Amazon SQS',
+        'description': 'Managed message queuing service'
+    },
+    'background_jobs': {
+        'service': 'AWS Lambda with EventBridge',
+        'description': 'Serverless functions for background processing'
+    },
+    'high_availability': {
+        'service': 'AWS Auto Scaling with ELB',
+        'description': 'High availability and load balancing'
+    },
+    'uses_containerization': {
+        'service': 'Amazon ECS or EKS',
+        'description': 'Container orchestration service'
+    }
+}
+
 # Load environment variables
 load_dotenv()
 
@@ -82,37 +122,91 @@ if raw_repo_url:
                 # Predict deployment type using the feature vector
                 predicted_deployment = predictor.predict_from_vector(feature_vector)
 
-                # Display predicted deployment type at the top
-                st.subheader("🔮 Predicted Deployment Type")
-                st.write(f"The predicted deployment type for this repository is: **{predicted_deployment}**")
+                # Display predicted deployment type at the top with a card-like container
+                st.markdown("""
+                    <style>
+                    .deployment-card {
+                        padding: 2rem;
+                        border-radius: 10px;
+                        border: 2px solid #e9ecef;
+                        margin-bottom: 2rem;
+                    }
+                    .aws-service-card {
+                        padding: 1rem;
+                        border-radius: 8px;
+                        border: 1px solid #dee2e6;
+                        margin: 0.5rem 0;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
 
-                # Create an expander for the rest of the information
-                with st.expander("View Repository and Analysis Information"):
-                    # Create two columns
-                    col1, col2 = st.columns(2)
+                st.markdown("""
+                    <div class='deployment-card'>
+                        <h2>🔮 Deployment Recommendation</h2>
+                        <h3 style='color: #0066cc;'>""" + predicted_deployment + """</h3>
+                    </div>
+                """, unsafe_allow_html=True)
 
-                    # Repository Information
-                    with col1:
-                        st.subheader("📊 Repository Information")
-                        st.write(f"**Directory Structure:** {repo_data['directory_structure']}")
-                        st.write(f"**Code Content:** {repo_data['textarea_content']}")
+                # If AWS is recommended, show relevant services
+                if predicted_deployment == "AWS":
+                    st.subheader("📦 Recommended AWS Services")
+                    
+                    # Create three columns for AWS services
+                    cols = st.columns(3)
+                    col_idx = 0
+                    
+                    for feature, present in combined_results.items():
+                        if present and feature in AWS_SERVICE_MAPPINGS:
+                            service_info = AWS_SERVICE_MAPPINGS[feature]
+                            with cols[col_idx % 3]:
+                                st.markdown(f"""
+                                    <div class='aws-service-card'>
+                                        <h4>{service_info['service']}</h4>
+                                        <p>{service_info['description']}</p>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                                col_idx += 1
 
-                    # Analysis Results
-                    with col2:
-                        st.subheader("🔍 Analysis Results")
-                        st.write("### Infrastructure Features")
+                # Create tabs for different sections of information
+                tab1, tab2 = st.tabs(["📊 Analysis Results", "📁 Repository Details"])
+                
+                with tab1:
+                    # Analysis Results in a more organized format
+                    st.markdown("""
+                        <style>
+                        .feature-present { color: #28a745; }
+                        .feature-absent { color: #dc3545; }
+                        </style>
+                    """, unsafe_allow_html=True)
+                    
+                    infra_col, code_col = st.columns(2)
+                    
+                    with infra_col:
+                        st.markdown("### 🏗️ Infrastructure Features")
                         for feature, present in directory_analysis.items():
                             status = "✓" if present else "✗"
-                            st.write(f"{feature.replace('_', ' ').title()}: {status}")
+                            color_class = "feature-present" if present else "feature-absent"
+                            st.markdown(f"<span class='{color_class}'>{status}</span> {feature.replace('_', ' ').title()}", unsafe_allow_html=True)
 
-                        st.write("### Code Features")
+                        with code_col:
+                            st.markdown("### 💻 Code Features")
                         for feature, data in code_analysis.items():
                             status = "✓" if data["present"] else "✗"
-                            st.write(f"{feature.replace('_', ' ').title()}: {status}")
+                            color_class = "feature-present" if data["present"] else "feature-absent"
+                            st.markdown(f"<span class='{color_class}'>{status}</span> {feature.replace('_', ' ').title()}", unsafe_allow_html=True)
                             if data["present"]:
-                                st.write(f"Details: {data['details']}")
-                                if data.get("improvements"):
-                                    st.write(f"Suggested Improvements: {data['improvements']}")
+                                with st.expander("View Details"):
+                                    st.write(f"**Details:** {data['details']}")
+                                    if data.get("improvements"):
+                                        st.write(f"**Suggested Improvements:** {data['improvements']}")
+
+                with tab2:
+                    st.subheader("📁 Repository Structure")
+                    st.json(repo_data['directory_structure'])
+                    
+                    st.subheader("📝 Code Content")
+                    with st.expander("View Code Content"):
+                        st.code(repo_data['textarea_content'])
 
             else:
                 st.error("Failed to fetch repository data")
