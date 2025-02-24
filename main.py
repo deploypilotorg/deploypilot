@@ -9,6 +9,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from scraper import GitIngestScraper  # Import the scraper
 from feature_analyzer import FeatureAnalyzer  # Import the FeatureAnalyzer
+from recommender import DeploymentPredictor  # Import the DeploymentPredictor
 
 # Load environment variables
 load_dotenv()
@@ -62,36 +63,55 @@ if raw_repo_url:
                 directory_analysis = analyzer.analyze_directory_structure(repo_data['directory_structure'])
                 code_analysis = analyzer.analyze_with_llm(repo_data['textarea_content'])
 
-                # Combine results
-                combined_results = {
-                    "infrastructure_analysis": directory_analysis,
-                    "code_analysis": code_analysis
-                }
+                # Combine results into a single dictionary with 1s and 0s
+                combined_results = {}
 
-                # Create two columns
-                col1, col2 = st.columns(2)
-                # Repository Information
-                with col1:
-                    st.subheader("📊 Repository Information")
-                    st.write(f"**Directory Structure:** {repo_data['directory_structure']}")
-                    st.write(f"**Code Content:** {repo_data['textarea_content']}")
+                # Unpack infrastructure analysis
+                for feature, present in directory_analysis.items():
+                    combined_results[feature] = 1 if present else 0
 
-                # Analysis Results
-                with col2:
-                    st.subheader("🔍 Analysis Results")
-                    st.write("### Infrastructure Features")
-                    for feature, present in directory_analysis.items():
-                        status = "✓" if present else "✗"
-                        st.write(f"{feature.replace('_', ' ').title()}: {status}")
+                # Unpack code analysis
+                for feature, data in code_analysis.items():
+                    combined_results[feature] = 1 if data["present"] else 0
 
-                    st.write("### Code Features")
-                    for feature, data in code_analysis.items():
-                        status = "✓" if data["present"] else "✗"
-                        st.write(f"{feature.replace('_', ' ').title()}: {status}")
-                        if data["present"]:
-                            st.write(f"Details: {data['details']}")
-                            if data.get("improvements"):
-                                st.write(f"Suggested Improvements: {data['improvements']}")
+                # Create an instance of DeploymentPredictor
+                predictor = DeploymentPredictor("dataset.csv")
+
+                # Predict deployment type
+                predicted_deployment = predictor.predict_deployment(f"{owner}/{repo}")
+
+                # Display predicted deployment type at the top
+                st.subheader("🔮 Predicted Deployment Type")
+                st.write(f"The predicted deployment type for this repository is: **{predicted_deployment}**")
+
+                # Create an expander for the rest of the information
+                with st.expander("View Repository and Analysis Information"):
+                    # Create two columns
+                    col1, col2 = st.columns(2)
+
+                    # Repository Information
+                    with col1:
+                        st.subheader("📊 Repository Information")
+                        st.write(f"**Directory Structure:** {repo_data['directory_structure']}")
+                        st.write(f"**Code Content:** {repo_data['textarea_content']}")
+
+                    # Analysis Results
+                    with col2:
+                        st.subheader("🔍 Analysis Results")
+                        st.write("### Infrastructure Features")
+                        for feature, present in directory_analysis.items():
+                            status = "✓" if present else "✗"
+                            st.write(f"{feature.replace('_', ' ').title()}: {status}")
+
+                        st.write("### Code Features")
+                        for feature, data in code_analysis.items():
+                            status = "✓" if data["present"] else "✗"
+                            st.write(f"{feature.replace('_', ' ').title()}: {status}")
+                            if data["present"]:
+                                st.write(f"Details: {data['details']}")
+                                if data.get("improvements"):
+                                    st.write(f"Suggested Improvements: {data['improvements']}")
+
             else:
                 st.error("Failed to fetch repository data")
     else:
