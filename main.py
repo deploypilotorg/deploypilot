@@ -8,6 +8,7 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 from scraper import GitIngestScraper  # Import the scraper
+from feature_analyzer import FeatureAnalyzer  # Import the FeatureAnalyzer
 
 # Load environment variables
 load_dotenv()
@@ -54,6 +55,19 @@ if raw_repo_url:
         with st.spinner("Fetching repository data..."):
             repo_data = get_repo_data(owner, repo)  # Update to use the scraper
             if repo_data:
+                # Create an instance of FeatureAnalyzer
+                analyzer = FeatureAnalyzer()
+
+                # Analyze the directory structure and code content
+                directory_analysis = analyzer.analyze_directory_structure(repo_data['directory_structure'])
+                code_analysis = analyzer.analyze_with_llm(repo_data['textarea_content'])
+
+                # Combine results
+                combined_results = {
+                    "infrastructure_analysis": directory_analysis,
+                    "code_analysis": code_analysis
+                }
+
                 # Create two columns
                 col1, col2 = st.columns(2)
                 # Repository Information
@@ -61,7 +75,23 @@ if raw_repo_url:
                     st.subheader("📊 Repository Information")
                     st.write(f"**Directory Structure:** {repo_data['directory_structure']}")
                     st.write(f"**Code Content:** {repo_data['textarea_content']}")
-                # Additional metrics can be added here if needed
+
+                # Analysis Results
+                with col2:
+                    st.subheader("🔍 Analysis Results")
+                    st.write("### Infrastructure Features")
+                    for feature, present in directory_analysis.items():
+                        status = "✓" if present else "✗"
+                        st.write(f"{feature.replace('_', ' ').title()}: {status}")
+
+                    st.write("### Code Features")
+                    for feature, data in code_analysis.items():
+                        status = "✓" if data["present"] else "✗"
+                        st.write(f"{feature.replace('_', ' ').title()}: {status}")
+                        if data["present"]:
+                            st.write(f"Details: {data['details']}")
+                            if data.get("improvements"):
+                                st.write(f"Suggested Improvements: {data['improvements']}")
             else:
                 st.error("Failed to fetch repository data")
     else:
