@@ -1,0 +1,7 @@
+graph TD;
+    subgraph "AWS"
+        A[ECS/EKS] -->|Container Orchestration| B[Amazon RDS/DynamoDB]
+        A -->|User Auth| C[Amazon Cognito]
+        A -->|Real-time Events| D[Amazon EventBridge/AWS AppSync]
+        A -->|Object Storage| E[Amazon S3]
+    end
