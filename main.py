@@ -6,7 +6,6 @@ from urllib.parse import urlparse
 import os
 import base64
 import subprocess
-import json
 from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
@@ -14,7 +13,6 @@ from dotenv import load_dotenv
 from feature_analyzer import FeatureAnalyzer
 from recommender import DeploymentPredictor
 from scraper import GitIngestScraper
-# Import the DiagramGenerator
 from diagram_generator import DiagramGenerator
 
 # AWS Service Mappings

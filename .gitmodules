@@ -1,0 +1,6 @@
+[submodule "data-engineering"]
+	path = data-engineering
+	url = https://github.com/deploypilotorg/data-engineering.git
+[submodule "data-analysts"]
+	path = data-analysts
+	url = https://github.com/deploypilotorg/data-analysts.git
