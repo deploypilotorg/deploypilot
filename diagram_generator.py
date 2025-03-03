@@ -33,7 +33,7 @@ class DiagramGenerator:
             str: Mermaid.js formatted architecture diagram.
         """
         prompt = (
-            f"""Analyze the following project structure for {repo_name} and generate a Mermaid.js diagram 
+            f"""Analyze the following project structure for {repo_name} and generate a Mermaid.js architecture diagram 
             representing the system architecture, including key services, components, and their interactions.
             Ensure the output follows Mermaid.js syntax.
             
