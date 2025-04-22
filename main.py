@@ -143,42 +143,94 @@ def query():
 @app.route('/status')
 def status():
     try:
-        response = requests.get(f"{API_URL}/docs")
+        logger.info(f"Checking API status at {API_URL}/docs")
+        response = requests.get(f"{API_URL}/docs", timeout=5)
+        logger.info(f"Status response code: {response.status_code}")
         if response.status_code == 200:
+            logger.info("API is online")
             return jsonify({"status": "online"})
         else:
-            return jsonify({"status": "error"})
-    except:
-        return jsonify({"status": "offline"})
+            logger.warning(f"API returned error status: {response.status_code}")
+            return jsonify({"status": "error", "code": response.status_code})
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"Connection error checking API status: {str(e)}")
+        return jsonify({"status": "offline", "error": str(e)})
+    except requests.exceptions.Timeout:
+        logger.error("Timeout checking API status")
+        return jsonify({"status": "timeout"})
+    except Exception as e:
+        logger.error(f"Unexpected error checking API status: {str(e)}")
+        return jsonify({"status": "error", "error": str(e)})
 
 @app.route('/workspace_info')
 def workspace_info():
     try:
-        response = requests.get(f"{API_URL}/workspace_info")
+        logger.info(f"Fetching workspace info from {API_URL}/workspace_info")
+        response = requests.get(f"{API_URL}/workspace_info", timeout=10)
+        logger.info(f"Workspace info response status: {response.status_code}")
+        
         if response.status_code == 200:
-            # Just pass the complete response from the API server
-            return jsonify(response.json())
+            # Log raw response for debugging
+            raw_response = response.text
+            logger.info(f"Raw workspace info response: {raw_response[:500]}...")
+            
+            try:
+                data = response.json()
+                logger.info("Successfully parsed workspace info JSON")
+                return jsonify(data)
+            except json.JSONDecodeError as e:
+                error_msg = f"Error parsing workspace info JSON: {str(e)}"
+                logger.error(error_msg)
+                logger.error(f"Response content that failed to parse: {raw_response[:500]}...")
+                return jsonify({"error": error_msg})
         else:
-            return jsonify({"error": f"Server returned status code {response.status_code}"})
-    except requests.exceptions.ConnectionError:
-        return jsonify({"error": "Could not connect to the agent server"})
+            error_msg = f"Server returned status code {response.status_code}"
+            logger.error(error_msg)
+            return jsonify({"error": error_msg})
+    except requests.exceptions.ConnectionError as e:
+        error_msg = f"Could not connect to the agent server: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({"error": error_msg})
+    except requests.exceptions.Timeout:
+        error_msg = "Request to API timed out"
+        logger.error(error_msg)
+        return jsonify({"error": error_msg})
     except Exception as e:
-        return jsonify({"error": str(e)})
+        error_msg = f"Unexpected error: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({"error": error_msg})
 
 @app.route('/reset_workspace', methods=['POST'])
 def reset_workspace():
     try:
-        response = requests.post(f"{API_URL}/reset_workspace")
+        logger.info(f"Resetting workspace via {API_URL}/reset_workspace")
+        response = requests.post(f"{API_URL}/reset_workspace", timeout=30)
+        logger.info(f"Reset workspace response status: {response.status_code}")
+        
         if response.status_code == 200:
-            data = response.json()
-            logger.info(f"Workspace reset: {data.get('message', '')}")
-            return jsonify(data)
+            # Log raw response for debugging
+            raw_response = response.text
+            logger.info(f"Raw reset workspace response: {raw_response[:500]}...")
+            
+            try:
+                data = response.json()
+                logger.info(f"Workspace reset: {data.get('message', '')}")
+                return jsonify(data)
+            except json.JSONDecodeError as e:
+                error_msg = f"Error parsing reset workspace JSON response: {str(e)}"
+                logger.error(error_msg)
+                logger.error(f"Response content that failed to parse: {raw_response[:500]}...")
+                return jsonify({"status": "error", "message": error_msg})
         else:
             error_msg = f"Error: Server returned status code {response.status_code}"
             logger.error(error_msg)
             return jsonify({"status": "error", "message": error_msg})
-    except requests.exceptions.ConnectionError:
-        error_msg = "Error: Could not connect to the agent server"
+    except requests.exceptions.ConnectionError as e:
+        error_msg = f"Error: Could not connect to the agent server: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({"status": "error", "message": error_msg})
+    except requests.exceptions.Timeout:
+        error_msg = "Error: Request to reset workspace timed out"
         logger.error(error_msg)
         return jsonify({"status": "error", "message": error_msg})
     except Exception as e:
