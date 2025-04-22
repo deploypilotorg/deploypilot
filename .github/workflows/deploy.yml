@@ -18,5 +18,7 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_PATH }}
             git pull
-            # Optional: restart any services if needed
-            # systemctl restart your-service.service 
+            # Rebuild and restart Docker containers
+            docker-compose down
+            docker-compose build --no-cache
+            docker-compose up -d 
