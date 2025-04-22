@@ -80,3 +80,27 @@ This is currently configured as a development server. For production use, consid
 2. Setting a secure secret key
 3. Configuring proper HTTPS
 
+## Automatic Deployment
+
+This project includes a GitHub Actions workflow that automatically deploys changes to your Digital Ocean droplet whenever code is pushed to the `main` branch.
+
+### Setting up GitHub Secrets
+
+For the deployment workflow to work, you need to set up the following secrets in your GitHub repository:
+
+1. Go to your GitHub repository > Settings > Secrets and variables > Actions
+2. Add the following secrets:
+   - `DROPLET_IP`: The IP address of your Digital Ocean droplet
+   - `DROPLET_USERNAME`: The username to SSH into your droplet (usually 'root')
+   - `SSH_PRIVATE_KEY`: Your private SSH key to access the droplet
+   - `PROJECT_PATH`: The absolute path to your project directory on the droplet
+
+### How It Works
+
+1. When you push to the `main` branch, the GitHub Actions workflow triggers
+2. It connects to your Digital Ocean droplet via SSH
+3. It navigates to your project directory and pulls the latest changes
+4. Optionally, it can restart any services if configured
+
+If you need to restart a service (like a systemd service), uncomment and modify the service restart line in `.github/workflows/deploy.yml`.
+
