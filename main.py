@@ -79,7 +79,7 @@ def query():
         logger.info(f"Query sent successfully. ID: {query_id}")
         
         # Poll for results
-        max_retries = 60  # Wait up to 1 minute
+        max_retries = 300  # Wait up to 5 minutes
         for retry_count in range(max_retries):
             logger.info(f"Polling for results (attempt {retry_count + 1}/{max_retries})...")
             result_response = requests.get(f"{API_URL}/result/{query_id}")
