@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  flask-app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - API_URL=http://api:8000
+    volumes:
+      - ./templates:/app/templates
+    restart: unless-stopped
+    networks:
+      - app-network
+      - mcp-client_default
+
+networks:
+  app-network:
+    driver: bridge
+  mcp-client_default:
+    external: true
+    name: mcp-client_default

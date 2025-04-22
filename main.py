@@ -4,6 +4,10 @@ import time
 import json
 import os
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -12,11 +16,12 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger('flask_github_agent')
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)  # For session handling
+app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))  # For session handling
 app.config['SERVER_NAME'] = None  # Allow any host
 
 # API server URL
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.environ.get('API_URL', "http://127.0.0.1:8000")
+logger.info(f"Using API URL: {API_URL}")
 
 @app.route('/')
 def index():
